@@ -26,23 +26,28 @@ async def request_fb(fb_api_url, fb_headers):
         path = item['path']
         name = item['name']
         if main_path in fb_json:
-            fb_json[main_path].append(path if isDir else name)
-            link_dir = f'{fb_api_url}{path}'
+            if isDir:
+                have_dir=True
+            link_dir = f'{fb_api_url}/{name}'
+            fb_json[main_path].append(path if isDir else link_dir)
             links_p.append(link_dir) if isDir else None
-            have_dir=True
+            
         else:
             fb_json[main_path] = [path if isDir else name]
+            if isDir:
+                have_dir=True
     return {
         'have_dir': have_dir,
         'fb_json': fb_json,
         'links': links_p
     }
 
-
-async def process_fb():
+fb_jsons = []
+async def process_fb(fb_api_url=None ):
     load_dotenv()
+    if fb_api_url==None:
+        fb_api_url=os.getenv('FB_URL')
     fb_pass = os.getenv('FB_PASS')
-    fb_api_url = os.getenv('FB_URL')
     fb_headers = {'X-SHARE-PASSWORD': fb_pass}
     fb_tree = await request_fb(fb_api_url, fb_headers)
     have_dir = fb_tree['have_dir']
@@ -53,27 +58,31 @@ async def process_fb():
     tasks = []
 
     for link in links:
-        tasks.append(request_fb(link, fb_headers))
+        tasks.append(asyncio.create_task(process_fb(fb_api_url=link )))
 
 
-    fb_jsons = []
+
+    
 
     if have_dir:
         fb_jsons.append(fb_json)
         responses = await asyncio.gather(*tasks)
         test = {"animes": []}
+        #print(json.dumps(responses, indent=4), end='\n\n')
         for response in responses:
-            test['animes'].append(response['fb_json'])
-        with open('test.json', 'w') as f:
+            if response is not None:
+                print(response)
+                test['animes'].append(response)
+        with open('fb_tree.json', 'w') as f:
                 json_data = json.dumps(test, indent=4)
                 f.write(json_data)
-            
-
-
-
-    #print(fb_jsons, sep="\n\n")
+    else:
+        print(f'else{fb_json}')
+    
+    return fb_json
+    
+    
         
-
 
 
 async def main():
