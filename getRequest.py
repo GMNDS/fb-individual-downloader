@@ -46,7 +46,7 @@ async def request_fb(fb_api_url=None, rpaths=[], dict_t_main = {}):
             if item not in dict_t:
                 dict_t[item] = {}
                 dict_t = dict_t[item]
-        dict_t[paths[-1]] = 'link'
+        dict_t[paths[-1]] = f'{fb_api_url}/{quote(name)}'
     with open('tree_pura.json', 'w') as t:
         t.write(json.dumps(dict_t_main, indent=2))
 
