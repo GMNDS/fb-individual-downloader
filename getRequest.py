@@ -55,27 +55,26 @@ async def request_fb(fb_api_url=None, rpaths=[]):
         else:
             paths = path.split('/')[1:]
             rpaths.append(paths)
-    return rpaths
+    return rpaths, fb_url_split
             
 
-async def create_dict_fb(paths=None):
-    dict_fb = {}
-    if paths==None:
-        paths = await request_fb(fb_api_url=None)
-    
-    for item in paths:
-        chave = item[0]
-        valores = item[1:]
-        if len(valores) > 0:
-            if chave not in dict_fb:
-                dict_fb[chave] = (await create_dict_fb(paths=[valores]))
-            else:
-                dict_fb[chave].update(await create_dict_fb(paths=[valores]))
-        else:
-            dict_fb[chave] = {"name": chave, "link": "test"}
-    print(dict_fb, end="\n\n")
-    return dict_fb
+async def create_dict_fb(paths=None, fb_url_split=''):
+    dict_fb_main = {}
+    load_dotenv()
+    token = os.getenv('TOKEN')
 
+    if paths is None or fb_url_split == '':
+        paths, fb_url_split = await request_fb(fb_api_url=None)
+
+    for items in paths:
+        dict_fb = dict_fb_main
+        for item in items[:-1]:
+            if item not in dict_fb:
+                dict_fb[item] = {}
+                dict_fb = dict_fb[item]
+        dict_fb[items[-1]] = f"{fb_url_split[0]}api/public/dl{fb_url_split[1]}/{'/'.join(items)}?token={token}"
+
+    return dict_fb
 
     
 async def main():
@@ -84,8 +83,9 @@ async def main():
     #response = await request_fb()
     dados = await request_fb(fb_api_url=None)
     response = await create_dict_fb(dados)
-    print(json.dumps(response, indent=4))
-    #print(response)
+    
+    with open('fb_tree.json', 'w') as f:
+        f.write(json.dumps(response, indent=4))
 
     end = time.time()
     total_time = end - start
